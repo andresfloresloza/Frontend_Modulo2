@@ -1,0 +1,25 @@
+.table-header {
+  background-color: gray !important;
+  color: white !important;
+  font-weight: bold;
+  border: 1px solid black !important;
+}
+
+.table-cell {
+  border: 1px solid black !important;
+}
+
+.table-total {
+  background-color: silver !important;
+  font-weight: bold;
+  border: 1px solid black !important;
+}
+
+.category-badge {
+  margin: 5px;
+}
+
+.category-badge .badge {
+  padding: 9px 14px;
+  margin: 2px;
+}

@@ -1,0 +1,460 @@
+import React, { useState, useEffect } from "react";
+import {
+  Container,
+  Row,
+  Col,
+  Button,
+  Table,
+  Badge,
+  Form,
+} from "react-bootstrap";
+import AccountModal from "./AccountModal";
+import TransactionModal from "./TransactionModal";
+import CategoryModal from "./CategoryModal";
+import "../styles/Dashboard.css";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { userLogout } from "../redux/loginSlice";
+import { ROUTER_INITIAL } from "../config/Constant";
+import {
+  getListsCuentasByUsuarioId,
+  postAccount,
+} from "../services/CuentaService";
+import {
+  getListsCategoriasByUsuarioId,
+  postCategory,
+} from "../services/CategoriaService";
+import { getByUsuarioId } from "../services/UsuarioService";
+import {
+  getMovimientoCategoriaId,
+  getMovimientoCuentaId,
+  postEgreso,
+  postIngreso,
+} from "../services/MovimientoService";
+
+const Dashboard = ({ Token }) => {
+  const dispatch = useDispatch();
+  const history = useNavigate();
+  const [accounts, setAccounts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showIncomeModal, setShowIncomeModal] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [user, setUser] = useState({});
+  const [cuentaId, setCuentaId] = useState(null);
+  const [categoriaId, setCategoriaId] = useState(null);
+  const [listaCuentas, setListaCuentas] = useState([]);
+  const [listaCategorias, setListaCategorias] = useState([]);
+  const [listaMovimientosCuentas, setListaMovimientosCuentas] = useState([]);
+  const [listaMovimientosCategorias, setListaMovimientosCategorias] = useState(
+    []
+  );
+  const datosMostrar = cuentaId
+    ? listaMovimientosCuentas
+    : categoriaId
+    ? listaMovimientosCategorias
+    : [];
+  const saldoTotal = listaCuentas.reduce(
+    (total, cuenta) => total + cuenta.saldo,
+    0
+  );
+
+  useEffect(() => {
+    getUsuario();
+    getCuentas();
+    getCategorias();
+  }, []);
+
+  const handleAddAccount = (newAccount) => {
+    registerNewAccount(newAccount);
+    setAccounts([...accounts, newAccount]);
+  };
+
+  const handleAddCategory = (newCategory) => {
+    registerNewCategory(newCategory);
+    setCategories([...categories, newCategory]);
+  };
+
+  const handleAddTransaction = (newTransaction) => {
+    registerIngresoEgreso(newTransaction);
+    setTransactions([...transactions, newTransaction]);
+  };
+
+  /* INFORMACION USUARIO */
+  const getUsuario = () => {
+    getByUsuarioId(Token.token, Token.usuarioId)
+      .then((response) => {
+        setUser(response.data[0]);
+        console.log(user);
+      })
+      .catch((error) => {});
+  };
+
+  /* INSERTAR CUENTA */
+  const registerNewAccount = (newAccount) => {
+    postAccount(Token.token, newAccount)
+      .then((response) => {
+        console.log(response);
+        getCuentas();
+      })
+      .catch((error) => {});
+  };
+
+  /* INSERTAR CATEGORIA */
+  const registerNewCategory = (newCategory) => {
+    postCategory(Token.token, newCategory)
+      .then((response) => {
+        console.log(response);
+        getCategorias();
+      })
+      .catch((error) => {});
+  };
+
+  /* INSERTAR INGRESO */
+  const registerIngresoEgreso = (newTransaction) => {
+    if (newTransaction.tipo === "ingreso") {
+      postIngreso(Token.token, newTransaction)
+        .then((response) => {
+          console.log(response);
+          getCuentas();
+        })
+        .catch((error) => {});
+    } else if (newTransaction.tipo === "egreso") {
+      postEgreso(Token.token, newTransaction)
+        .then((response) => {
+          console.log(response);
+          getCuentas();
+        })
+        .catch((error) => {});
+    }
+  };
+
+  /* LISTA DE CUENTAS */
+  const getCuentas = () => {
+    getListsCuentasByUsuarioId(Token.token, Token.usuarioId)
+      .then((response) => {
+        setListaCuentas(response.data);
+        console.log(response.data);
+        getUsuario();
+      })
+      .catch((error) => {});
+  };
+
+  /* LISTA DE CATEGORIAS */
+  const getCategorias = () => {
+    getListsCategoriasByUsuarioId(Token.token, Token.usuarioId)
+      .then((response) => {
+        setListaCategorias(response.data);
+        console.log(response.data);
+        getUsuario();
+      })
+      .catch((error) => {});
+  };
+
+  /* LISTA DE MOVIMIENTOS POR CATEGORIAS */
+  const getMovimientosCategorias = (id) => {
+    getMovimientoCategoriaId(Token.token, id)
+      .then((response) => {
+        setListaMovimientosCategorias(response.data);
+        console.log(response.data);
+      })
+      .catch((error) => {});
+  };
+
+  /* LISTA DE MOVIMIENTOS POR CATEGORIAS */
+  const getMovimientosCuentas = (id) => {
+    getMovimientoCuentaId(Token.token, id)
+      .then((response) => {
+        setListaMovimientosCuentas(response.data);
+        console.log(response.data);
+      })
+      .catch((error) => {});
+  };
+
+  const handleCuentaChange = (id) => {
+    setCuentaId(id);
+    setCategoriaId("");
+    console.log("CUENTA: " + cuentaId);
+    getMovimientosCuentas(id);
+  };
+
+  const handleCategoriaChange = (id) => {
+    setCategoriaId(id);
+    setCuentaId("");
+    console.log("CATEGORIA: " + categoriaId);
+    getMovimientosCategorias(id);
+  };
+
+  const cerrar_sesion = () => {
+    dispatch(userLogout(Token));
+    history(ROUTER_INITIAL);
+  };
+  return (
+    <Container>
+      <Row className="mt-4">
+        <Button variant="danger" onClick={cerrar_sesion}>
+          Salir
+        </Button>
+
+        <Col md={8}>
+          <br />
+          <section
+            style={{
+              backgroundColor: "white",
+              padding: "10px",
+              borderRadius: "15px",
+              textAlign: "center",
+            }}
+          >
+            <h1>Dashboard - {user.firstName + " " + user.lastName}</h1>
+            <h1>Monto Total: {user.montoTotal} Bs.</h1>
+          </section>
+          <br />
+          <section
+            style={{
+              backgroundColor: "white",
+              padding: "10px",
+              borderRadius: "15px",
+              textAlign: "center",
+            }}
+          >
+            <h1>Historial de Movimientos</h1>
+            <h2>Cuenta Principal</h2>
+            <div style={{ display: "flex", justifyContent: "space-evenly" }}>
+              <Form>
+                <Form.Group controlId="seleccionObjeto">
+                  <Form.Control
+                    value={cuentaId}
+                    as="select"
+                    onChange={(e) => handleCuentaChange(e.target.value)}
+                  >
+                    <option value="">Selecciona una Cuenta...</option>
+                    {listaCuentas.map((objeto, index) => (
+                      <option key={index} value={objeto.id}>
+                        {objeto.nombre}
+                      </option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              </Form>
+              <Form>
+                <Form.Group controlId="seleccionObjeto">
+                  <Form.Control
+                    as="select"
+                    value={categoriaId}
+                    onChange={(e) => handleCategoriaChange(e.target.value)}
+                  >
+                    <option value="">Selecciona una Categoria...</option>
+                    {listaCategorias.map((objeto, index) => (
+                      <option key={index} value={objeto.id}>
+                        {objeto.nombre}
+                      </option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              </Form>
+            </div>
+            <div
+              style={{
+                textAlign: "center",
+              }}
+            >
+              <h4>Ingreso</h4>
+              <Table striped bordered hover>
+                <thead>
+                  <tr>
+                    <th className="table-header">Cuenta</th>
+                    <th className="table-header">Categoria</th>
+                    <th className="table-header">Descripcion</th>
+                    <th className="table-header">Tipo</th>
+                    <th className="table-header">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {datosMostrar
+                    .filter(
+                      (dato) =>
+                        dato.tipo === "Ingreso" || dato.tipo === "ingreso"
+                    )
+                    .map((dato, index) => (
+                      <tr key={index}>
+                        <td className="table-cell">{dato.cuentaId}</td>
+                        <td className="table-cell">{dato.categoriaId}</td>
+                        <td className="table-cell">{dato.descripcion}</td>
+                        <td className="table-cell">{dato.tipo}</td>
+                        <td className="table-cell">{dato.saldo} Bs.</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </Table>
+              <br /> <h4>Egreso</h4>
+              <Table striped bordered hover>
+                <thead>
+                  <tr>
+                    <th className="table-header">Cuenta</th>
+                    <th className="table-header">Categoria</th>
+                    <th className="table-header">Descripcion</th>
+                    <th className="table-header">Tipo</th>
+                    <th className="table-header">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {datosMostrar
+                    .filter(
+                      (dato) => dato.tipo === "Egreso" || dato.tipo === "egreso"
+                    )
+                    .map((dato, index) => (
+                      <tr key={index}>
+                        <td className="table-cell">{dato.cuentaId}</td>
+                        <td className="table-cell">{dato.categoriaId}</td>
+                        <td className="table-cell">{dato.descripcion}</td>
+                        <td className="table-cell">{dato.tipo}</td>
+                        <td className="table-cell">{dato.saldo} Bs.</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </Table>
+            </div>
+          </section>
+        </Col>
+
+        <Col md={4}>
+          <br />
+          <section style={{ backgroundColor: "white", padding: "10px" }}>
+            <div>
+              <Button
+                style={{ marginBottom: "15px" }}
+                onClick={() => setShowAccountModal(true)}
+              >
+                Agregar Cuenta
+              </Button>
+              <Button
+                style={{ marginBottom: "15px" }}
+                onClick={() => setShowCategoryModal(true)}
+              >
+                Agregar Categoría
+              </Button>
+              <Button
+                style={{ marginBottom: "15px" }}
+                onClick={() => setShowIncomeModal(true)}
+              >
+                Registrar Ingreso
+              </Button>
+              <Button
+                style={{ marginBottom: "15px" }}
+                onClick={() => setShowExpenseModal(true)}
+              >
+                Registrar Egreso
+              </Button>
+              <Button onClick={() => setShowTransactionModal(true)}>
+                Registrar Transferencia
+              </Button>
+            </div>
+          </section>
+          <section
+            style={{
+              backgroundColor: "white",
+              padding: "8px",
+              textAlign: "center",
+            }}
+          >
+            <h1>Lista de Cuentas:</h1>
+
+            <Table striped bordered hover>
+              <thead>
+                <tr>
+                  <th className="table-header">Nombre</th>
+                  <th className="table-header">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listaCuentas.map((cuenta, index) => (
+                  <tr key={index}>
+                    <td className="table-cell">{cuenta.nombre}</td>
+                    <td className="table-cell">{cuenta.saldo} Bs.</td>
+                  </tr>
+                ))}
+                <br />
+                <tr>
+                  <td className="table-total">Total</td>
+                  <td className="table-total">{saldoTotal} Bs.</td>
+                </tr>
+              </tbody>
+            </Table>
+          </section>
+
+          <section
+            style={{
+              backgroundColor: "white",
+              padding: "8px",
+              textAlign: "center",
+            }}
+          >
+            <h1>Lista de Categorías:</h1>
+            <Table striped bordered hover>
+              <tbody>
+                <tr>
+                  <td>
+                    <div className="category-badge">
+                      {listaCategorias.map((categoria, index) => (
+                        <Badge
+                          key={index}
+                          variant="info"
+                          className="account-badge-item"
+                        >
+                          {categoria.nombre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </Table>
+          </section>
+        </Col>
+      </Row>
+      <CategoryModal
+        show={showCategoryModal}
+        handleClose={() => setShowCategoryModal(false)}
+        handleAddCategory={handleAddCategory}
+        usuarioId={Token.usuarioId}
+      />
+
+      <AccountModal
+        show={showAccountModal}
+        handleClose={() => setShowAccountModal(false)}
+        handleAddAccount={handleAddAccount}
+        usuarioId={Token.usuarioId}
+      />
+
+      <TransactionModal
+        show={showIncomeModal}
+        handleClose={() => setShowIncomeModal(false)}
+        handleAddTransaction={handleAddTransaction}
+        type="ingreso"
+        Token={Token}
+      />
+
+      <TransactionModal
+        show={showExpenseModal}
+        handleClose={() => setShowExpenseModal(false)}
+        handleAddTransaction={handleAddTransaction}
+        type="egreso"
+        Token={Token}
+      />
+
+      <TransactionModal
+        show={showTransactionModal}
+        handleClose={() => setShowTransactionModal(false)}
+        handleAddTransaction={handleAddTransaction}
+        type="transferencia"
+        Token={Token}
+      />
+    </Container>
+  );
+};
+
+export default Dashboard;
