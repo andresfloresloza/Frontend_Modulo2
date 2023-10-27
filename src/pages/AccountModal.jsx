@@ -17,6 +17,7 @@ const AccountModal = ({ show, handleClose, handleAddAccount, usuarioId }) => {
   };
 
   return (
+    <>
     <Modal show={show} onHide={handleClose}>
       <Modal.Header closeButton>
         <Modal.Title>Agregar Cuenta</Modal.Title>
@@ -40,6 +41,7 @@ const AccountModal = ({ show, handleClose, handleAddAccount, usuarioId }) => {
         </Button>
       </Modal.Footer>
     </Modal>
+    </>
   );
 };
 

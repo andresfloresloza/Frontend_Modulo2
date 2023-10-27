@@ -7,8 +7,10 @@ const TransactionModal = ({
   show,
   handleClose,
   handleAddTransaction,
+  handleUpdateTransaction,
   type,
   Token,
+  object,
 }) => {
   const [descripcion, setDescripcion] = useState("");
   const [monto, setMonto] = useState(0.0);
@@ -21,7 +23,37 @@ const TransactionModal = ({
   useEffect(() => {
     getCuentas();
     getCategorias();
-  }, []);
+    if (object === null) {
+      setDescripcion("");
+      setMonto(0.0);
+      setObjetoCuentaOrigen("");
+      setObjetoCuentaDestino("");
+      setObjetoCategoria("");
+    } else {
+      setDescripcion(object.descripcion || "");
+      setMonto(object.saldo || 0.0);
+      setObjetoCuentaOrigen(
+        findCuentaIdByName(object.cuenta, listaCuentas) || ""
+      );
+      setObjetoCategoria(
+        findCategoriaIdByName(object.categoria, listaCategorias) || ""
+      );
+    }
+  }, [object, type]);
+
+  function findCuentaIdByName(nombreCuenta, listaCuentas) {
+    const cuenta = listaCuentas.find(
+      (cuenta) => cuenta.nombre === nombreCuenta
+    );
+    return cuenta ? cuenta.id : "";
+  }
+
+  function findCategoriaIdByName(nombreCategoria, listaCategorias) {
+    const categoria = listaCategorias.find(
+      (categoria) => categoria.nombre === nombreCategoria
+    );
+    return categoria ? categoria.id : "";
+  }
 
   /* LISTA DE CUENTAS */
   const getCuentas = () => {
@@ -44,21 +76,52 @@ const TransactionModal = ({
   };
 
   const handleSave = () => {
+    if (type === "ingreso" || type === "egreso") {
+      const newTransaction = {
+        cuentaId: objetoCuentaOrigen,
+        categoriaId: objetoCategoria,
+        descripcion: descripcion,
+        tipo: type,
+        saldo: monto,
+      };
+      handleAddTransaction(newTransaction);
+      setObjetoCuentaOrigen("");
+      setObjetoCategoria("");
+      setDescripcion("");
+      setMonto(0.0);
+      handleClose();
+    }
     const newTransaction = {
-      cuentaId: objetoCuentaOrigen,
-      categoriaId: objetoCategoria,
-      descripcion: descripcion,
-      tipo: type,
+      cuentaOrigenId: objetoCuentaOrigen,
+      cuentaDestinoId: objetoCuentaDestino,
+      usuarioId: Token.usuarioId,
       saldo: monto,
     };
     handleAddTransaction(newTransaction);
     setObjetoCuentaOrigen("");
-    setObjetoCategoria("");
-    setDescripcion("");
+    setObjetoCuentaDestino("");
     setMonto(0.0);
     handleClose();
   };
-
+  const handleUpdate = () => {
+    if (type === "ingreso" || type === "egreso") {
+      const updatedTransaction = {
+        id: object.id,
+        cuentaId: objetoCuentaOrigen,
+        categoriaId: objetoCategoria,
+        descripcion: descripcion,
+        tipo: type,
+        saldo: monto,
+      };
+      handleUpdateTransaction(updatedTransaction);
+      setObjetoCuentaOrigen("");
+      setObjetoCategoria("");
+      setDescripcion("");
+      setMonto(0.0);
+      handleClose();
+      handleClose();
+    }
+  };
   const modalTitle =
     type === "ingreso"
       ? "Registrar Ingreso"
@@ -98,11 +161,13 @@ const TransactionModal = ({
                   onChange={(e) => setObjetoCategoria(e.target.value)}
                 >
                   <option value="">Selecciona una Categoria...</option>
-                  {listaCategorias.map((objeto, index) => (
-                    <option key={index} value={objeto.id}>
-                      {objeto.nombre}
-                    </option>
-                  ))}
+                  {listaCategorias
+                    .filter((dato) => dato.tipo === type)
+                    .map((objeto, index) => (
+                      <option key={index} value={objeto.id}>
+                        {objeto.nombre}
+                      </option>
+                    ))}
                 </Form.Control>
               </Form.Group>
               <Form.Group controlId="descripcion">
@@ -126,8 +191,11 @@ const TransactionModal = ({
             </Form>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="primary" onClick={handleSave}>
-              Guardar
+            <Button
+              variant="primary"
+              onClick={object ? handleUpdate : handleSave}
+            >
+              {object ? "Actualizar" : "Guardar"}
             </Button>
           </Modal.Footer>
         </Modal>
@@ -167,16 +235,6 @@ const TransactionModal = ({
                     </option>
                   ))}
                 </Form.Control>
-              </Form.Group>
-
-              <Form.Group controlId="descripcion">
-                <Form.Label>Descripción:</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Descripción de la transacción"
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                />
               </Form.Group>
               <Form.Group controlId="monto">
                 <Form.Label>Monto:</Form.Label>
